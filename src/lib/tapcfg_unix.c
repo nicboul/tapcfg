@@ -91,11 +91,15 @@ tapcfg_destroy(tapcfg_t *tapcfg)
 	free(tapcfg);
 }
 
+#include <unistd.h>
+#include <fcntl.h>
+
 int
 tapcfg_start(tapcfg_t *tapcfg, const char *ifname, int fallback)
 {
 	int tap_fd;
 	int ctrl_fd;
+	int flags;
 
 	assert(tapcfg);
 
@@ -113,6 +117,9 @@ tapcfg_start(tapcfg_t *tapcfg, const char *ifname, int fallback)
 	if (tap_fd < 0) {
 		goto err;
 	}
+
+	flags = fcntl(tap_fd, F_GETFL, 0);
+	fcntl(tap_fd, F_SETFL, flags|~O_NONBLOCK);
 
 	ctrl_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (ctrl_fd == -1) {
@@ -200,8 +207,7 @@ tapcfg_read(tapcfg_t *tapcfg, void *buf, int count)
 	}
 
 	if (!tapcfg->buflen) {
-		ret = read(tapcfg->tap_fd, tapcfg->buffer,
-			   sizeof(tapcfg->buffer));
+		ret = read(tapcfg->tap_fd, buf, count);
 		if (ret <= 0) {
 			return ret;
 		}
@@ -217,11 +223,11 @@ tapcfg_read(tapcfg_t *tapcfg, void *buf, int count)
 	}
 
 	ret = tapcfg->buflen;
-	memcpy(buf, tapcfg->buffer, tapcfg->buflen);
+//	memcpy(buf, tapcfg->buffer, tapcfg->buflen);
 	tapcfg->buflen = 0;
 
-	taplog_log(&tapcfg->taplog, TAPLOG_DEBUG, "Read ethernet frame:");
-	taplog_log_ethernet_info(&tapcfg->taplog, TAPLOG_DEBUG, buf, ret);
+//	taplog_log(&tapcfg->taplog, TAPLOG_DEBUG, "Read ethernet frame:");
+//	taplog_log_ethernet_info(&tapcfg->taplog, TAPLOG_DEBUG, buf, ret);
 
 	return ret;
 }
